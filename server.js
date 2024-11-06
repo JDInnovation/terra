@@ -6,14 +6,15 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
 
-app.use(express.static('public')); // Onde seus arquivos HTML, CSS, JS estão
+app.use(express.static('public')); // Aponte para a pasta onde está seu HTML, CSS, JS
 
 io.on('connection', (socket) => {
     console.log('Novo jogador conectado');
-    
+
+    // Receber a ação do jogador
     socket.on('playerAction', (data) => {
-        // Envia a ação do jogador para todos os clientes
-        io.emit('updateGame', data);
+        // Enviar a ação para todos os jogadores
+        socket.broadcast.emit('updateGame', data);
     });
 
     socket.on('disconnect', () => {

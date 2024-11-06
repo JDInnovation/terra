@@ -435,3 +435,49 @@ function resetGame() {
 
 // Inicializa o jogo ao carregar a página
 window.onload = createBoard;
+
+const socket = io(); // Conecta ao servidor Socket.IO
+
+// Em vez de realizar ações diretamente, envie uma ação ao servidor
+function executeAttack(row, col) {
+    const target = board[row][col];
+    const attacker = selectedCharacter.character;
+    const damage = attacker.attack || 1;
+
+    if (target) {
+        target.health -= damage;
+        showDamageIndicator(row, col, damage);
+        updateHealthBar(row, col, target.health);
+
+        if (target.type === 'base' && target.health <= 0) {
+            announceWinner();
+            return;
+        }
+
+        if (target.health <= 0) {
+            board[row][col] = null;
+            const cell = document.querySelector(`[data-row='${row}'][data-col='${col}']`);
+            cell.textContent = "";
+            cell.classList.remove(`player${target.player}`);
+        }
+    }
+    
+    // Envia a ação para o servidor
+    socket.emit('playerAction', {
+        action: 'attack',
+        target: { row, col, previousHealth: target.health + damage },
+        player: currentPlayer
+    });
+
+    playerEnergy -= energyCost.attack;
+    updateEnergyDisplay();
+    clearAttackHighlights();
+    lastAction = { type: 'attack', target: { row, col, previousHealth: target.health + damage } };
+    selectedCharacter = null;
+}
+
+// Escuta por atualizações do jogo do servidor
+socket.on('updateGame', (data) => {
+    // Aqui você irá atualizar o estado do jogo de acordo com a ação recebida
+    // Por exemplo, mover uma personagem ou atacar
+});
