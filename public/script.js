@@ -45,6 +45,7 @@ function renderGameState() {
     const gameBoard = document.getElementById("game-board");
     gameBoard.innerHTML = ""; // Limpa o conteúdo do tabuleiro
 
+    // Renderiza o tabuleiro
     for (let row = 0; row < gameState.board.length; row++) {
         for (let col = 0; col < gameState.board[row].length; col++) {
             const cellContent = gameState.board[row][col];
@@ -53,21 +54,34 @@ function renderGameState() {
             cell.dataset.row = row;
             cell.dataset.col = col;
 
+            // Se a célula contém um personagem ou base, adiciona conteúdo
             if (cellContent) {
                 if (cellContent.type === 'base') {
                     cell.textContent = '🏰'; // Ícone da base
-                    cell.classList.add(`player${cellContent.player}`);
+                    cell.classList.add(`player${cellContent.player}`); // Classe para distinguir jogadores
                 } else {
+                    // Para personagens, você pode usar um ícone associado ao tipo
                     cell.textContent = characters[cellContent.type].icon; // Ícone da personagem
-                    cell.classList.add(`player${cellContent.player}`);
+                    cell.classList.add(`player${cellContent.player}`); // Classe para distinguir jogadores
                 }
-                addHealthBar(cell, cellContent.health);
+                addHealthBar(cell, cellContent.health); // Adiciona a barra de vida
             }
 
-            gameBoard.appendChild(cell);
+            gameBoard.appendChild(cell); // Adiciona a célula ao tabuleiro
         }
     }
 }
+
+// Função para adicionar uma barra de vida à célula
+function addHealthBar(cell, health) {
+    const healthBar = document.createElement("div");
+    healthBar.classList.add("health-bar");
+    healthBar.style.width = `${(health / 12) * 100}%`; // Ajuste conforme a vida máxima
+    cell.appendChild(healthBar);
+}
+
+// Outras funções como movimentação e ataque podem ser adicionadas aqui...
+
 
 // Função para adicionar uma barra de vida à célula
 function addHealthBar(cell, health) {
