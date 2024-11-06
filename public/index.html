@@ -9,8 +9,16 @@
 </head>
 <body>
     <h1>Batalha de Terras</h1>
-    <div id="game-board"></div>
-    <div id="controls">
+    
+    <!-- Formulário para registrar o jogador -->
+    <div id="player-registration">
+        <label for="player-id">Digite seu nome ou ID:</label>
+        <input type="text" id="player-id" placeholder="Seu nome ou ID" required>
+        <button id="register-button" onclick="registerPlayer()">Pronto</button>
+    </div>
+
+    <div id="game-board" style="display:none;"></div> <!-- O tabuleiro está oculto até o registro -->
+    <div id="controls" style="display:none;">
         <p id="turn-info">Turno do Jogador 1</p>
         <p id="energy-info">Energia Restante: 5</p>
         <button onclick="selectAction('base')">Colocar Base 🏰</button>

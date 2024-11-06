@@ -9,8 +9,9 @@ const io = socketIo(server);
 app.use(express.static('public')); // Aponte para a pasta onde estão seus arquivos HTML, CSS e JS
 
 let gameState = {
-    players: {}, // Mapeia jogadores e seus estados
-    board: Array(8).fill().map(() => Array(8).fill(null)), // Inicializa o tabuleiro
+    players: {},
+    board: Array(8).fill().map(() => Array(8).fill(null)),
+    gameStarted: false // Flag para verificar se o jogo começou
 };
 
 io.on('connection', (socket) => {
@@ -19,6 +20,13 @@ io.on('connection', (socket) => {
     // Adiciona o jogador ao estado do jogo
     socket.on('registerPlayer', (playerId) => {
         gameState.players[playerId] = { /* detalhes do jogador, como a posição inicial */ };
+        
+        // Verifica se o jogo já começou
+        if (Object.keys(gameState.players).length === 2 && !gameState.gameStarted) {
+            gameState.gameStarted = true;
+            io.emit('startGame', gameState); // Inicia o jogo para todos os jogadores
+        }
+        
         socket.emit('updateGame', gameState); // Envia o estado inicial do jogo ao novo jogador
     });
 
@@ -34,6 +42,7 @@ io.on('connection', (socket) => {
 
     socket.on('disconnect', () => {
         console.log('Jogador desconectado');
+        delete gameState.players[socket.id]; // Remove o jogador ao desconectar
     });
 });
 

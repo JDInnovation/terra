@@ -1,128 +1,63 @@
-const boardSize = 8;
-let currentPlayer = 1;
-let board = [];
-let basePlaced = { 1: false, 2: false };
-let selectedAction = "base";
-let selectedCharacter = null;
-let playerEnergy = 5;
-let lastAction = null;  // Para armazenar a última ação para retroceder
-let undoAvailable = { 1: true, 2: true };
-
-// Personagens e construções
-const characters = {
-    warrior: { icon: '🗡️', moves: 1, attack: 1, health: 4, range: 1 },
-    archer: { icon: '🏹', moves: 1, attack: 0.5, health: 3, range: 2 },
-    tank: { icon: '🛡️', moves: 1, attack: 0.5, health: 12, range: 1 },
-    healer: { icon: '🩹', moves: 1, attack: 0, health: 3, heal: 2, range: 1 },
-    base: { icon: '🏰', moves: 0, attack: 1, health: 8, range: 1 }  // Base com vida reduzida
+const socket = io(); // Conecta ao servidor Socket.IO
+let playerId = null; // ID do jogador
+let gameState = {
+    players: {},
+    board: Array(8).fill().map(() => Array(8).fill(null)),
 };
 
-// Custo de energia para ações
-const energyCost = {
-    base: 3,
-    warrior: 3,
-    archer: 3,
-    tank: 4,
-    healer: 3,
-    move: 1,
-    attack: 2
-};
+// Função para registrar o jogador e iniciar o jogo
+function registerPlayer() {
+    playerId = document.getElementById("player-id").value;
+    if (playerId) {
+        socket.emit('registerPlayer', playerId);
+        document.getElementById("player-registration").style.display = 'none'; // Esconde o formulário
+        document.getElementById("game-board").style.display = 'block'; // Mostra o tabuleiro
+        document.getElementById("controls").style.display = 'block'; // Mostra os controles
+    } else {
+        alert("Por favor, insira um nome ou ID válido.");
+    }
+}
 
-// Inicializa o tabuleiro
-function createBoard() {
+// Escuta por atualizações do jogo do servidor
+socket.on('updateGame', (data) => {
+    console.log(`Atualização recebida:`, data); // Log para depuração
+    gameState = data; // Atualiza o estado do jogo localmente
+    renderGameState(); // Chama a função para atualizar a UI
+});
+
+// Escuta para o evento de início do jogo
+socket.on('startGame', (data) => {
+    console.log("O jogo começou!");
+    gameState = data; // Atualiza o estado do jogo localmente
+    renderGameState(); // Chama a função para atualizar a UI
+});
+
+// Função para renderizar o estado do jogo
+function renderGameState() {
     const gameBoard = document.getElementById("game-board");
-    gameBoard.innerHTML = "";
-    board = Array.from({ length: boardSize }, () => Array(boardSize).fill(null));
+    gameBoard.innerHTML = ""; // Limpa o conteúdo do tabuleiro
 
-    for (let row = 0; row < boardSize; row++) {
-        for (let col = 0; col < boardSize; col++) {
+    for (let row = 0; row < gameState.board.length; row++) {
+        for (let col = 0; col < gameState.board[row].length; col++) {
+            const cellContent = gameState.board[row][col];
             const cell = document.createElement("div");
             cell.classList.add("cell");
             cell.dataset.row = row;
             cell.dataset.col = col;
-            cell.addEventListener("click", () => handleCellClick(row, col, cell));
+
+            if (cellContent) {
+                if (cellContent.type === 'base') {
+                    cell.textContent = '🏰'; // Ícone da base
+                    cell.classList.add(`player${cellContent.player}`);
+                } else {
+                    cell.textContent = characters[cellContent.type].icon;
+                    cell.classList.add(`player${cellContent.player}`);
+                }
+                addHealthBar(cell, cellContent.health);
+            }
+
             gameBoard.appendChild(cell);
         }
-    }
-
-    updateMessage("Coloque sua base inicial");
-    updateEnergyDisplay();
-}
-
-// Atualiza a exibição de energia
-function updateEnergyDisplay() {
-    document.getElementById("energy-info").textContent = `Energia Restante: ${playerEnergy}`;
-}
-
-// Manipula clique na célula
-function handleCellClick(row, col, cell) {
-    if (playerEnergy < energyCost[selectedAction]) {
-        updateMessage("Energia insuficiente para esta ação");
-        return;
-    }
-
-    if (selectedAction === 'base' && !basePlaced[currentPlayer]) {
-        placeBase(row, col);
-    } else if (selectedAction && basePlaced[currentPlayer]) {
-        switch (selectedAction) {
-            case 'warrior':
-            case 'archer':
-            case 'tank':
-            case 'healer':
-                if (isAdjacentToBase(row, col)) {
-                    addCharacter(row, col, selectedAction);
-                } else {
-                    updateMessage("Jogue na zona obrigatória");
-                }
-                break;
-            case 'move':
-                selectCharacterToMove(row, col);
-                break;
-            case 'attack':
-                selectCharacterToAttack(row, col);
-                break;
-        }
-    }
-}
-
-// Verifica se a célula é adjacente à base
-function isAdjacentToBase(row, col) {
-    const baseCells = getBaseCells(currentPlayer);
-    return baseCells.some(([r, c]) => Math.abs(r - row) <= 1 && Math.abs(c - col) <= 1);
-}
-
-// Obter células da base
-function getBaseCells(player) {
-    return board.flatMap((rowArr, row) => 
-        rowArr.map((cell, col) => (cell && cell.type === 'base' && cell.player === player ? [row, col] : null))
-    ).filter(cell => cell !== null);
-}
-
-// Coloca a base
-function placeBase(row, col) {
-    if (board[row][col] === null) {
-        board[row][col] = { type: 'base', player: currentPlayer, health: characters.base.health };
-        const cell = document.querySelector(`[data-row='${row}'][data-col='${col}']`);
-        cell.textContent = characters.base.icon;
-        cell.classList.add(`player${currentPlayer}`);
-        basePlaced[currentPlayer] = true;
-        playerEnergy -= energyCost.base;
-        updateEnergyDisplay();
-        lastAction = null;  // A base não pode ser desfeita
-    }
-}
-
-// Adiciona personagem
-function addCharacter(row, col, character) {
-    if (board[row][col] === null) {
-        board[row][col] = { type: character, player: currentPlayer, health: characters[character].health };
-        const cell = document.querySelector(`[data-row='${row}'][data-col='${col}']`);
-        cell.textContent = characters[character].icon;
-        cell.classList.add(`player${currentPlayer}`);
-        addHealthBar(cell, characters[character].health);
-        playerEnergy -= energyCost[character];
-        updateEnergyDisplay();
-        lastAction = { type: 'add', row, col, character, player: currentPlayer };
     }
 }
 
@@ -436,119 +371,3 @@ function resetGame() {
 // Inicializa o jogo ao carregar a página
 window.onload = createBoard;
 
-const socket = io(); // Conecta ao servidor Socket.IO
-
-// Registra o jogador (você pode usar um ID único ou nome)
-const playerId = prompt("Digite seu nome ou ID:");
-socket.emit('registerPlayer', playerId);
-
-// Estado do jogo
-let gameState = {
-    players: {},
-    board: Array(8).fill().map(() => Array(8).fill(null)),
-};
-
-// Função para executar o ataque
-function executeAttack(row, col) {
-    const target = gameState.board[row][col];
-    const attacker = selectedCharacter.character;
-    const damage = attacker.attack || 1;
-
-    if (target) {
-        target.health -= damage;
-        showDamageIndicator(row, col, damage);
-        updateHealthBar(row, col, target.health);
-
-        if (target.type === 'base' && target.health <= 0) {
-            announceWinner();
-            return;
-        }
-
-        if (target.health <= 0) {
-            gameState.board[row][col] = null; // Remove o alvo se a vida for <= 0
-        }
-    }
-
-    // Envia a ação para o servidor
-    socket.emit('playerAction', {
-        action: 'attack',
-        target: { row, col, previousHealth: target.health + damage },
-        player: playerId // Identifica o jogador
-    });
-
-    playerEnergy -= energyCost.attack;
-    updateEnergyDisplay();
-    clearAttackHighlights();
-    lastAction = { type: 'attack', target: { row, col, previousHealth: target.health + damage } };
-    selectedCharacter = null;
-}
-
-// Função para mover o personagem
-function moveCharacter(newRow, newCol) {
-    const { row, col, character } = selectedCharacter;
-
-    // Verifica se o movimento é válido (apenas em cruz)
-    if (Math.abs(newRow - row) + Math.abs(newCol - col) !== 1) {
-        updateMessage("Movimento inválido. Personagens só podem se mover em linha reta.");
-        return;
-    }
-
-    gameState.board[newRow][newCol] = character;
-    gameState.board[row][col] = null;
-
-    // Envia o movimento para o servidor
-    socket.emit('playerAction', {
-        action: 'move',
-        from: { row, col },
-        to: { newRow, newCol },
-        character,
-        player: playerId
-    });
-
-    lastAction = { type: 'move', from: [row, col], to: [newRow, newCol], character };
-    selectedCharacter = null;
-}
-
-// Escuta por atualizações do jogo do servidor
-socket.on('updateGame', (data) => {
-    console.log(`Atualização recebida:`, data); // Log para depuração
-    gameState = data; // Atualiza o estado do jogo localmente
-    renderGameState(); // Chama a função para atualizar a UI
-});
-
-// Função para renderizar o estado do jogo
-function renderGameState() {
-    const gameBoard = document.getElementById("game-board");
-    gameBoard.innerHTML = ""; // Limpa o conteúdo do tabuleiro
-
-    for (let row = 0; row < gameState.board.length; row++) {
-        for (let col = 0; col < gameState.board[row].length; col++) {
-            const cellContent = gameState.board[row][col];
-            const cell = document.createElement("div");
-            cell.classList.add("cell");
-            cell.dataset.row = row;
-            cell.dataset.col = col;
-
-            if (cellContent) {
-                if (cellContent.type === 'base') {
-                    cell.textContent = '🏰'; // Ícone da base
-                    cell.classList.add(`player${cellContent.player}`);
-                } else {
-                    cell.textContent = characters[cellContent.type].icon;
-                    cell.classList.add(`player${cellContent.player}`);
-                }
-                addHealthBar(cell, cellContent.health);
-            }
-
-            gameBoard.appendChild(cell);
-        }
-    }
-}
-
-// Função para adicionar uma barra de vida à célula
-function addHealthBar(cell, health) {
-    const healthBar = document.createElement("div");
-    healthBar.classList.add("health-bar");
-    healthBar.style.width = `${(health / 12) * 100}%`; // Ajuste conforme a vida máxima
-    cell.appendChild(healthBar);
-}
