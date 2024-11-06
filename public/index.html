@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Batalha de Terras</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <h1>Batalha de Terras</h1>
+    <div id="game-board"></div>
+    <div id="controls">
+        <p id="turn-info">Turno do Jogador 1</p>
+        <p id="energy-info">Energia Restante: 5</p>
+        <button onclick="selectAction('base')">Colocar Base 🏰 <span class="cost">(3 Energia)</span></button>
+        <button onclick="selectAction('warrior')">Adicionar Guerreiro 🗡️ <span class="cost">(3 Energia)</span></button>
+        <button onclick="selectAction('archer')">Adicionar Arqueiro 🏹 <span class="cost">(3 Energia)</span></button>
+        <button onclick="selectAction('tank')">Adicionar Tanque 🛡️ <span class="cost">(4 Energia)</span></button>
+        <button onclick="selectAction('healer')">Adicionar Healer 🩹 <span class="cost">(3 Energia)</span></button>
+        <button onclick="selectAction('move')">Mover Personagem <span class="cost">(1 Energia)</span></button>
+        <button onclick="selectAction('attack')">Atacar <span class="cost">(2 Energia)</span></button>
+        <button onclick="endTurn()">Terminar Turno</button>
+        <button onclick="undoAction()">Retroceder Ação</button>
+        <button onclick="resetGame()">Reiniciar Jogo</button>
+    </div>
+    <div id="info">
+        <p id="message">Ação: Coloque sua base inicial</p>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,119 @@
+body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f9;
+}
+
+h1 {
+    margin: 20px;
+}
+
+#game-board {
+    display: grid;
+    grid-template-columns: repeat(8, 60px);
+    gap: 5px;
+    margin-bottom: 20px;
+    position: relative;
+}
+
+.cell {
+    width: 60px;
+    height: 60px;
+    background-color: #ddd;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5em;
+    cursor: pointer;
+    position: relative;
+    border: 2px solid transparent;
+    flex-direction: column;
+}
+
+.cell .health-bar {
+    width: 80%;
+    height: 5px;
+    background-color: #f00;
+    margin-top: 5px;
+    border-radius: 2px;
+}
+
+.cell.player1 {
+    border-color: #4CAF50; /* Contorno Verde para Jogador 1 */
+}
+
+.cell.player2 {
+    border-color: #FF5722; /* Contorno Laranja para Jogador 2 */
+}
+
+.addable {
+    background-color: rgba(0, 0, 255, 0.4); /* Azul para células onde pode adicionar personagem */
+}
+
+.movable {
+    background-color: rgba(0, 255, 0, 0.4); /* Verde para células movíveis */
+}
+
+.attackable {
+    background-color: rgba(255, 0, 0, 0.4); /* Vermelho para células atacáveis */
+}
+
+.selectable {
+    outline: 2px dashed gold; /* Destaque em dourado para personagens que podem executar uma ação */
+}
+
+.range-highlight {
+    background-color: rgba(255, 0, 0, 0.2); /* Leve vermelho para alcance de ataque */
+}
+
+.cost {
+    font-size: 0.8em;
+    color: gray;
+}
+
+.damage-indicator {
+    position: absolute;
+    font-size: 1em;
+    color: red;
+    font-weight: bold;
+    animation: fadeOut 1s forwards;
+}
+
+@keyframes fadeOut {
+    0% { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(-10px); }
+}
+
+#controls {
+    text-align: center;
+    margin-top: 10px;
+}
+
+#turn-info {
+    font-size: 1.2em;
+    margin-bottom: 10px;
+}
+
+#energy-info {
+    font-size: 1em;
+    margin-bottom: 10px;
+    color: blue;
+}
+
+#message {
+    margin-top: 10px;
+    font-size: 1.1em;
+    font-weight: bold;
+}
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
