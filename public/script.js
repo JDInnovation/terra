@@ -476,29 +476,7 @@ function executeAttack(row, col) {
     selectedCharacter = null;
 }
 
-// Escuta por atualizações do jogo do servidor
-socket.on('updateGame', (data) => {
-    // Atualiza o estado do jogo de acordo com a ação recebida
-    switch (data.action) {
-        case 'attack':
-            const { row, col, previousHealth } = data.target;
-            const targetCell = board[row][col];
-            if (targetCell) {
-                targetCell.health = previousHealth;
-                if (targetCell.health <= 0) {
-                    board[row][col] = null; // Remove o alvo se a vida for <= 0
-                    const cell = document.querySelector(`[data-row='${row}'][data-col='${col}']`);
-                    cell.textContent = "";
-                    cell.classList.remove(`player${targetCell.player}`);
-                }
-            }
-            updateHealthBar(row, col, previousHealth);
-            break;
-        // Adicione mais casos para outras ações (como movimento)
-    }
-});
-
-// Exemplo de como enviar dados de movimento
+// Função para mover o personagem
 function moveCharacter(newRow, newCol) {
     const { row, col, character } = selectedCharacter;
 
@@ -529,9 +507,48 @@ function moveCharacter(newRow, newCol) {
         action: 'move',
         from: { row, col },
         to: { newRow, newCol },
-        character
+        character,
+        player: currentPlayer
     });
 
     lastAction = { type: 'move', from: [row, col], to: [newRow, newCol], character };
     selectedCharacter = null;
 }
+
+// Escuta por atualizações do jogo do servidor
+socket.on('updateGame', (data) => {
+    console.log(`Atualização recebida:`, data); // Log para depuração
+    switch (data.action) {
+        case 'attack':
+            const { row, col, previousHealth } = data.target;
+            const targetCell = board[row][col];
+            if (targetCell) {
+                targetCell.health = previousHealth;
+                if (targetCell.health <= 0) {
+                    board[row][col] = null; // Remove o alvo se a vida for <= 0
+                    const cell = document.querySelector(`[data-row='${row}'][data-col='${col}']`);
+                    cell.textContent = "";
+                    cell.classList.remove(`player${targetCell.player}`);
+                }
+            }
+            updateHealthBar(row, col, previousHealth);
+            break;
+
+        case 'move':
+            const { from, to, character } = data;
+            board[to.newRow][to.newCol] = character;
+            board[from.row][from.col] = null;
+
+            const fromCell = document.querySelector(`[data-row='${from.row}'][data-col='${from.col}']`);
+            fromCell.textContent = "";
+            fromCell.classList.remove(`player${data.player}`);
+
+            const toCell = document.querySelector(`[data-row='${to.newRow}'][data-col='${to.newCol}']`);
+            toCell.textContent = characters[character.type].icon;
+            toCell.classList.add(`player${data.player}`);
+            addHealthBar(toCell, character.health);
+            break;
+
+        // Adicione outros casos para diferentes tipos de ações, como adicionar um personagem
+    }
+});
