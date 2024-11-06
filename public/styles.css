@@ -19,8 +19,8 @@ h1 {
 }
 
 .cell {
-    width: 60px;
-    height: 60px;
+    width: 40px;
+    height: 40px;
     background-color: #ddd;
     display: flex;
     align-items: center;
