@@ -333,14 +333,102 @@ function selectAction(action) {
 
 // Termina o turno
 function endTurn() {
-    currentPlayer = currentPlayer === 1 ? 2 : 1;
-    playerEnergy = 5;
-    document.getElementById("turn-info").textContent = `Turno do Jogador ${currentPlayer}`;
-    updateEnergyDisplay();
-    selectedAction = null;
-    selectedCharacter = null;
-    clearAllHighlights();
-    undoAvailable[currentPlayer] = true;
+    if (currentPlayer === 1) {
+        // Jogador humano
+        currentPlayer = 2;
+        playerEnergy = 5;
+        document.getElementById("turn-info").textContent = `Turno do Jogador ${currentPlayer}`;
+        updateEnergyDisplay();
+        selectedAction = null;
+        selectedCharacter = null;
+        clearAllHighlights();
+        undoAvailable[currentPlayer] = true;
+    } else {
+        // Turno da IA
+        setTimeout(() => {
+            playComputerTurn();
+            currentPlayer = 1; // Volta para o jogador humano
+            playerEnergy = 5;
+            document.getElementById("turn-info").textContent = `Turno do Jogador ${currentPlayer}`;
+            updateEnergyDisplay();
+            selectedAction = null;
+            selectedCharacter = null;
+            clearAllHighlights();
+            undoAvailable[currentPlayer] = true;
+        }, 1000); // Delay para simular tempo de resposta da IA
+    }
+}
+
+// Função para a IA jogar
+function playComputerTurn() {
+    // Lógica básica da IA para fazer uma ação
+    if (!basePlaced[currentPlayer]) {
+        // Tentar colocar a base em uma posição aleatória
+        let placed = false;
+        while (!placed) {
+            const row = Math.floor(Math.random() * boardSize);
+            const col = Math.floor(Math.random() * boardSize);
+            if (board[row][col] === null) {
+                placeBase(row, col);
+                placed = true;
+            }
+        }
+    } else {
+        // Adicionar um personagem ou atacar, se possível
+        const possibleActions = Object.keys(energyCost).filter(action => playerEnergy >= energyCost[action]);
+        
+        if (possibleActions.length > 0) {
+            const action = possibleActions[Math.floor(Math.random() * possibleActions.length)];
+            switch (action) {
+                case 'warrior':
+                case 'archer':
+                case 'tank':
+                case 'healer':
+                    const baseCells = getBaseCells(currentPlayer);
+                    let added = false;
+                    for (const [r, c] of baseCells) {
+                        const positions = [
+                            [r - 1, c], [r + 1, c], [r, c - 1], [r, c + 1]
+                        ];
+                        for (const [nr, nc] of positions) {
+                            if (board[nr] && board[nr][nc] === null) {
+                                addCharacter(nr, nc, action);
+                                added = true;
+                                break;
+                            }
+                        }
+                        if (added) break;
+                    }
+                    break;
+                case 'attack':
+                    // Lógica para atacar um personagem adversário
+                    attackRandomOpponent();
+                    break;
+            }
+        }
+    }
+}
+
+// Função para atacar um oponente aleatório
+function attackRandomOpponent() {
+    const opponents = [];
+    for (let row = 0; row < boardSize; row++) {
+        for (let col = 0; col < boardSize; col++) {
+            const cell = board[row][col];
+            if (cell && cell.player === 1) {
+                opponents.push([row, col]);
+            }
+        }
+    }
+
+    if (opponents.length > 0) {
+        const [targetRow, targetCol] = opponents[Math.floor(Math.random() * opponents.length)];
+        const attacker = board[targetRow][targetCol];
+        const damage = attacker.attack || 1;
+
+        // Executa ataque
+        executeAttack(targetRow, targetCol);
+    }
 }
 
 // Retrocede a última ação
