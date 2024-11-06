@@ -438,7 +438,7 @@ window.onload = createBoard;
 
 const socket = io(); // Conecta ao servidor Socket.IO
 
-// Em vez de realizar ações diretamente, envie uma ação ao servidor
+// Função para executar o ataque
 function executeAttack(row, col) {
     const target = board[row][col];
     const attacker = selectedCharacter.character;
@@ -461,7 +461,7 @@ function executeAttack(row, col) {
             cell.classList.remove(`player${target.player}`);
         }
     }
-    
+
     // Envia a ação para o servidor
     socket.emit('playerAction', {
         action: 'attack',
@@ -478,6 +478,60 @@ function executeAttack(row, col) {
 
 // Escuta por atualizações do jogo do servidor
 socket.on('updateGame', (data) => {
-    // Aqui você irá atualizar o estado do jogo de acordo com a ação recebida
-    // Por exemplo, mover uma personagem ou atacar
+    // Atualiza o estado do jogo de acordo com a ação recebida
+    switch (data.action) {
+        case 'attack':
+            const { row, col, previousHealth } = data.target;
+            const targetCell = board[row][col];
+            if (targetCell) {
+                targetCell.health = previousHealth;
+                if (targetCell.health <= 0) {
+                    board[row][col] = null; // Remove o alvo se a vida for <= 0
+                    const cell = document.querySelector(`[data-row='${row}'][data-col='${col}']`);
+                    cell.textContent = "";
+                    cell.classList.remove(`player${targetCell.player}`);
+                }
+            }
+            updateHealthBar(row, col, previousHealth);
+            break;
+        // Adicione mais casos para outras ações (como movimento)
+    }
 });
+
+// Exemplo de como enviar dados de movimento
+function moveCharacter(newRow, newCol) {
+    const { row, col, character } = selectedCharacter;
+
+    // Verifica se o movimento é válido (apenas em cruz)
+    if (Math.abs(newRow - row) + Math.abs(newCol - col) !== 1) {
+        updateMessage("Movimento inválido. Personagens só podem se mover em linha reta.");
+        return;
+    }
+
+    board[newRow][newCol] = character;
+    board[row][col] = null;
+
+    const oldCell = document.querySelector(`[data-row='${row}'][data-col='${col}']`);
+    oldCell.textContent = "";
+    oldCell.classList.remove(`player${currentPlayer}`, "movable");
+
+    const newCell = document.querySelector(`[data-row='${newRow}'][data-col='${newCol}']`);
+    newCell.textContent = characters[character.type].icon;
+    newCell.classList.add(`player${currentPlayer}`);
+    addHealthBar(newCell, character.health);
+
+    playerEnergy -= energyCost.move;
+    updateEnergyDisplay();
+    clearMovableHighlights();
+
+    // Envia o movimento para o servidor
+    socket.emit('playerAction', {
+        action: 'move',
+        from: { row, col },
+        to: { newRow, newCol },
+        character
+    });
+
+    lastAction = { type: 'move', from: [row, col], to: [newRow, newCol], character };
+    selectedCharacter = null;
+}
