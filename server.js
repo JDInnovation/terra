@@ -19,7 +19,8 @@ io.on('connection', (socket) => {
 
     // Adiciona o jogador ao estado do jogo
     socket.on('registerPlayer', (playerId) => {
-        gameState.players[playerId] = { /* detalhes do jogador, como a posição inicial */ };
+        gameState.players[socket.id] = { id: playerId }; // Armazena o ID do jogador
+        console.log(`Jogador registrado: ${playerId}`);
         
         // Verifica se o jogo já começou
         if (Object.keys(gameState.players).length === 2 && !gameState.gameStarted) {
@@ -31,8 +32,8 @@ io.on('connection', (socket) => {
     });
 
     socket.on('playerAction', (data) => {
-        // Atualiza o estado do jogo com base na ação recebida
-        // Exemplo: processar ataque ou movimento
+        // Aqui você deve atualizar o estado do jogo com base na ação recebida
+        // Exemplo: processar movimento ou ataque
         // Atualize gameState.board e outros elementos do estado conforme necessário
         // ...
 

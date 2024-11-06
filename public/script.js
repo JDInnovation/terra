@@ -50,7 +50,7 @@ function renderGameState() {
                     cell.textContent = '🏰'; // Ícone da base
                     cell.classList.add(`player${cellContent.player}`);
                 } else {
-                    cell.textContent = characters[cellContent.type].icon;
+                    cell.textContent = characters[cellContent.type].icon; // Ícone da personagem
                     cell.classList.add(`player${cellContent.player}`);
                 }
                 addHealthBar(cell, cellContent.health);
@@ -61,46 +61,76 @@ function renderGameState() {
     }
 }
 
-// Adiciona uma barra de vida ao personagem
+// Função para adicionar uma barra de vida à célula
 function addHealthBar(cell, health) {
     const healthBar = document.createElement("div");
     healthBar.classList.add("health-bar");
-    healthBar.style.width = `${(health / 12) * 100}%`; // Vida máxima
+    healthBar.style.width = `${(health / 12) * 100}%`; // Ajuste conforme a vida máxima
     cell.appendChild(healthBar);
 }
 
-// Seleciona personagem para mover
-function selectCharacterToMove(row, col) {
-    const cellContent = board[row][col];
-    if (cellContent && cellContent.player === currentPlayer && cellContent.type !== 'base') {
-        selectedCharacter = { row, col, character: cellContent };
-        highlightMovableCells(row, col);
-    } else if (selectedCharacter && board[row][col] === null) {
-        moveCharacter(row, col);
+// Função para executar um ataque
+function executeAttack(row, col) {
+    const target = gameState.board[row][col];
+    const attacker = selectedCharacter.character;
+    const damage = attacker.attack || 1;
+
+    if (target) {
+        target.health -= damage;
+        showDamageIndicator(row, col, damage);
+        updateHealthBar(row, col, target.health);
+
+        if (target.type === 'base' && target.health <= 0) {
+            announceWinner();
+            return;
+        }
+
+        if (target.health <= 0) {
+            gameState.board[row][col] = null; // Remove o alvo se a vida for <= 0
+        }
     }
-}
 
-// Move o personagem para a nova célula
-function moveCharacter(newRow, newCol) {
-    const { row, col, character } = selectedCharacter;
-    board[newRow][newCol] = character;
-    board[row][col] = null;
+    // Envia a ação para o servidor
+    socket.emit('playerAction', {
+        action: 'attack',
+        target: { row, col, previousHealth: target.health + damage },
+        player: playerId // Identifica o jogador
+    });
 
-    const oldCell = document.querySelector(`[data-row='${row}'][data-col='${col}']`);
-    oldCell.textContent = "";
-    oldCell.classList.remove(`player${currentPlayer}`, "movable");
-
-    const newCell = document.querySelector(`[data-row='${newRow}'][data-col='${newCol}']`);
-    newCell.textContent = characters[character.type].icon;
-    newCell.classList.add(`player${currentPlayer}`);
-    addHealthBar(newCell, character.health);
-
-    playerEnergy -= energyCost.move;
+    playerEnergy -= energyCost.attack;
     updateEnergyDisplay();
-    clearMovableHighlights();
-    lastAction = { type: 'move', from: [row, col], to: [newRow, newCol], character: character };
+    clearAttackHighlights();
+    lastAction = { type: 'attack', target: { row, col, previousHealth: target.health + damage } };
     selectedCharacter = null;
 }
+
+// Função para mover o personagem
+function moveCharacter(newRow, newCol) {
+    const { row, col, character } = selectedCharacter;
+
+    // Verifica se o movimento é válido (apenas em cruz)
+    if (Math.abs(newRow - row) + Math.abs(newCol - col) !== 1) {
+        updateMessage("Movimento inválido. Personagens só podem se mover em linha reta.");
+        return;
+    }
+
+    gameState.board[newRow][newCol] = character;
+    gameState.board[row][col] = null;
+
+    // Envia o movimento para o servidor
+    socket.emit('playerAction', {
+        action: 'move',
+        from: { row, col },
+        to: { newRow, newCol },
+        character,
+        player: playerId
+    });
+
+    lastAction = { type: 'move', from: [row, col], to: [newRow, newCol], character };
+    selectedCharacter = null;
+}
+
+// Adicione outras funções para executar ações (mover, atacar, etc.) conforme necessário...
 
 // Seleciona personagem para atacar
 function selectCharacterToAttack(row, col) {
