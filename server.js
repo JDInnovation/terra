@@ -8,14 +8,28 @@ const io = socketIo(server);
 
 app.use(express.static('public')); // Aponte para a pasta onde estão seus arquivos HTML, CSS e JS
 
+let gameState = {
+    players: {}, // Mapeia jogadores e seus estados
+    board: Array(8).fill().map(() => Array(8).fill(null)), // Inicializa o tabuleiro
+};
+
 io.on('connection', (socket) => {
     console.log('Novo jogador conectado');
 
-    // Receber a ação do jogador
+    // Adiciona o jogador ao estado do jogo
+    socket.on('registerPlayer', (playerId) => {
+        gameState.players[playerId] = { /* detalhes do jogador, como a posição inicial */ };
+        socket.emit('updateGame', gameState); // Envia o estado inicial do jogo ao novo jogador
+    });
+
     socket.on('playerAction', (data) => {
-        console.log(`Ação recebida de ${data.player}:`, data); // Log para depuração
-        // Enviar a ação para todos os outros jogadores conectados
-        socket.broadcast.emit('updateGame', data);
+        // Atualiza o estado do jogo com base na ação recebida
+        // Exemplo: processar ataque ou movimento
+        // Atualize gameState.board e outros elementos do estado conforme necessário
+        // ...
+
+        // Emite o novo estado do jogo para todos os jogadores
+        io.emit('updateGame', gameState);
     });
 
     socket.on('disconnect', () => {

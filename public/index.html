@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Batalha de Terras</title>
     <link rel="stylesheet" href="styles.css">
+    <script src="/socket.io/socket.io.js"></script> <!-- Inclua o Socket.IO -->
 </head>
 <body>
     <h1>Batalha de Terras</h1>
@@ -12,15 +13,14 @@
     <div id="controls">
         <p id="turn-info">Turno do Jogador 1</p>
         <p id="energy-info">Energia Restante: 5</p>
-        <button onclick="selectAction('base')">Colocar Base 🏰 <span class="cost">(3 Energia)</span></button>
-        <button onclick="selectAction('warrior')">Adicionar Guerreiro 🗡️ <span class="cost">(3 Energia)</span></button>
-        <button onclick="selectAction('archer')">Adicionar Arqueiro 🏹 <span class="cost">(3 Energia)</span></button>
-        <button onclick="selectAction('tank')">Adicionar Tanque 🛡️ <span class="cost">(4 Energia)</span></button>
-        <button onclick="selectAction('healer')">Adicionar Healer 🩹 <span class="cost">(3 Energia)</span></button>
-        <button onclick="selectAction('move')">Mover Personagem <span class="cost">(1 Energia)</span></button>
-        <button onclick="selectAction('attack')">Atacar <span class="cost">(2 Energia)</span></button>
+        <button onclick="selectAction('base')">Colocar Base 🏰</button>
+        <button onclick="selectAction('warrior')">Adicionar Guerreiro 🗡️</button>
+        <button onclick="selectAction('archer')">Adicionar Arqueiro 🏹</button>
+        <button onclick="selectAction('tank')">Adicionar Tanque 🛡️</button>
+        <button onclick="selectAction('healer')">Adicionar Healer 🩹</button>
+        <button onclick="selectAction('move')">Mover Personagem</button>
+        <button onclick="selectAction('attack')">Atacar</button>
         <button onclick="endTurn()">Terminar Turno</button>
-        <button onclick="undoAction()">Retroceder Ação</button>
         <button onclick="resetGame()">Reiniciar Jogo</button>
     </div>
     <div id="info">
