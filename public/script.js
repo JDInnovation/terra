@@ -5,6 +5,14 @@ let gameState = {
     board: Array(8).fill().map(() => Array(8).fill(null)),
 };
 
+let selectedCharacter = null; // Personagem selecionada para mover ou atacar
+let selectedAction = null; // Ação selecionada (mover, atacar, etc.)
+let currentPlayer = 1; // Jogador atual
+let playerEnergy = 5; // Energia do jogador
+const energyCost = { move: 1, attack: 1 }; // Custo de energia para ações
+let lastAction = null; // Armazena a última ação para retroceder
+let undoAvailable = { 1: true, 2: true }; // Verifica se o retrocesso está disponível
+
 // Função para registrar o jogador e iniciar o jogo
 function registerPlayer() {
     playerId = document.getElementById("player-id").value;
@@ -130,22 +138,20 @@ function moveCharacter(newRow, newCol) {
     selectedCharacter = null;
 }
 
-// Adicione outras funções para executar ações (mover, atacar, etc.) conforme necessário...
-
 // Seleciona personagem para atacar
 function selectCharacterToAttack(row, col) {
-    const cellContent = board[row][col];
+    const cellContent = gameState.board[row][col];
     if (cellContent && cellContent.player === currentPlayer) {
         selectedCharacter = { row, col, character: cellContent };
         highlightAttackableTargets(row, col, cellContent.type);
-    } else if (selectedCharacter && board[row][col] && board[row][col].player !== currentPlayer) {
+    } else if (selectedCharacter && gameState.board[row][col] && gameState.board[row][col].player !== currentPlayer) {
         executeAttack(row, col);
     }
 }
 
 // Realiza o ataque e desconta o dano do alvo
 function executeAttack(row, col) {
-    const target = board[row][col];
+    const target = gameState.board[row][col];
     const attacker = selectedCharacter.character;
     const damage = attacker.attack || 1;
 
@@ -160,7 +166,7 @@ function executeAttack(row, col) {
         }
 
         if (target.health <= 0) {
-            board[row][col] = null;
+            gameState.board[row][col] = null;
             const cell = document.querySelector(`[data-row='${row}'][data-col='${col}']`);
             cell.textContent = "";
             cell.classList.remove(`player${target.player}`);
@@ -199,7 +205,7 @@ function highlightMovableCells(row, col) {
         [row - 1, col], [row + 1, col], [row, col - 1], [row, col + 1]
     ];
     moveRange.forEach(([r, c]) => {
-        if (r >= 0 && r < boardSize && c >= 0 && c < boardSize && board[r][c] === null) {
+        if (r >= 0 && r < boardSize && c >= 0 && c < boardSize && gameState.board[r][c] === null) {
             document.querySelector(`[data-row='${r}'][data-col='${c}']`).classList.add("movable");
         }
     });
@@ -218,7 +224,7 @@ function highlightAttackableTargets(row, col, characterType) {
                 newRow >= 0 && newRow < boardSize &&
                 newCol >= 0 && newCol < boardSize &&
                 (Math.abs(r) + Math.abs(c) <= range) &&
-                board[newRow][newCol] && board[newRow][newCol].player !== currentPlayer
+                gameState.board[newRow][newCol] && gameState.board[newRow][newCol].player !== currentPlayer
             ) {
                 attackRange.push([newRow, newCol]);
             }
@@ -311,8 +317,8 @@ function undoAction() {
     switch (lastAction.type) {
         case 'move':
             const { from, to, character } = lastAction;
-            board[from[0]][from[1]] = character;
-            board[to[0]][to[1]] = null;
+            gameState.board[from[0]][from[1]] = character;
+            gameState.board[to[0]][to[1]] = null;
 
             updateCell(from[0], from[1], character);
             clearCell(to[0], to[1]);
@@ -321,14 +327,14 @@ function undoAction() {
 
         case 'attack':
             const { row, col, previousHealth } = lastAction.target;
-            board[row][col].health = previousHealth;
+            gameState.board[row][col].health = previousHealth;
             updateHealthBar(row, col, previousHealth);
             playerEnergy += energyCost.attack;
             break;
 
         case 'add':
             const { row: addRow, col: addCol } = lastAction;
-            board[addRow][addCol] = null;
+            gameState.board[addRow][addCol] = null;
             clearCell(addRow, addCol);
             playerEnergy += energyCost[lastAction.character];
             break;
@@ -369,7 +375,7 @@ function highlightAddableCells() {
             [r - 1, c - 1], [r - 1, c + 1], [r + 1, c - 1], [r + 1, c + 1]
         ];
         addableCells.forEach(([nr, nc]) => {
-            if (nr >= 0 && nr < boardSize && nc >= 0 && nc < boardSize && board[nr][nc] === null) {
+            if (nr >= 0 && nr < boardSize && nc >= 0 && nc < boardSize && gameState.board[nr][nc] === null) {
                 document.querySelector(`[data-row='${nr}'][data-col='${nc}']`).classList.add("addable");
             }
         });
@@ -380,7 +386,7 @@ function highlightAddableCells() {
 function highlightSelectableCharacters() {
     for (let row = 0; row < boardSize; row++) {
         for (let col = 0; col < boardSize; col++) {
-            const cellContent = board[row][col];
+            const cellContent = gameState.board[row][col];
             if (cellContent && cellContent.player === currentPlayer && (selectedAction === 'move' || selectedAction === 'attack')) {
                 document.querySelector(`[data-row='${row}'][data-col='${col}']`).classList.add("selectable");
             }
@@ -400,4 +406,3 @@ function resetGame() {
 
 // Inicializa o jogo ao carregar a página
 window.onload = createBoard;
-
