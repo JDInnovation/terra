@@ -19,12 +19,33 @@
         <button onclick="selectAction('healer')">Adicionar Healer 🩹 <span class="cost">(3 Energia)</span></button>
         <button onclick="selectAction('move')">Mover Personagem <span class="cost">(1 Energia)</span></button>
         <button onclick="selectAction('attack')">Atacar <span class="cost">(2 Energia)</span></button>
+        <button onclick="useSpecialAbility()">Usar Habilidade Especial</button>
         <button onclick="endTurn()">Terminar Turno</button>
         <button onclick="undoAction()">Retroceder Ação</button>
         <button onclick="resetGame()">Reiniciar Jogo</button>
+        <button onclick="toggleInstructions()">Instruções</button>
     </div>
     <div id="info">
         <p id="message">Ação: Coloque sua base inicial</p>
+    </div>
+    <div id="instructions" style="display:none;">
+        <h2>Instruções</h2>
+        <p>O objetivo do jogo é destruir a base do adversário. Cada jogador tem 5 pontos de energia por turno para realizar ações.</p>
+        <p>As ações disponíveis são:</p>
+        <ul>
+            <li>Colocar Base: Coloca uma base inicial.</li>
+            <li>Adicionar Personagens: Adiciona guerreiros, arqueiros, tanques ou healers ao tabuleiro.</li>
+            <li>Mover Personagem: Mova seu personagem para uma célula adjacente.</li>
+            <li>Atacar: Ataca um personagem inimigo adjacente.</li>
+            <li>Usar Habilidade Especial: Habilidade única que pode ser utilizada uma vez por jogo.</li>
+        </ul>
+        <button onclick="toggleInstructions()">Fechar Instruções</button>
+    </div>
+    <div id="turn-summary" style="display:none;"></div>
+    <div id="stats">
+        <h2>Estatísticas</h2>
+        <p id="victories">Vitórias: 0</p>
+        <p id="defeats">Derrotas: 0</p>
     </div>
     <script src="script.js"></script>
 </body>

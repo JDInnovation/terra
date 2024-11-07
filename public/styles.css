@@ -30,6 +30,7 @@ h1 {
     position: relative;
     border: 2px solid transparent;
     flex-direction: column;
+    transition: background-color 0.2s ease; /* Animação de transição */
 }
 
 .cell .health-bar {
@@ -108,6 +109,26 @@ h1 {
     font-weight: bold;
 }
 
-  
-  
-  
+#instructions {
+    margin: 20px;
+    padding: 20px;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+#turn-summary {
+    margin-top: 20px;
+    padding: 10px;
+    background-color: #eee;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+#stats {
+    margin-top: 20px;
+    padding: 10px;
+    background-color: #e0e0e0;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}

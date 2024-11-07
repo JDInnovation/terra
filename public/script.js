@@ -7,13 +7,15 @@ let selectedCharacter = null;
 let playerEnergy = 5;
 let lastAction = null;  // Para armazenar a última ação para retroceder
 let undoAvailable = { 1: true, 2: true };
+let turnSummary = []; // Armazena o resumo do turno
+let playerStats = { 1: { victories: 0, defeats: 0 }, 2: { victories: 0, defeats: 0 } };
 
 // Personagens e construções
 const characters = {
-    warrior: { icon: '🗡️', moves: 1, attack: 1, health: 4, range: 1 },
-    archer: { icon: '🏹', moves: 1, attack: 0.5, health: 3, range: 2 },
-    tank: { icon: '🛡️', moves: 1, attack: 0.5, health: 12, range: 1 },
-    healer: { icon: '🩹', moves: 1, attack: 0, health: 3, heal: 2, range: 1 },
+    warrior: { icon: '🗡️', moves: 1, attack: 1, health: 4, range: 1, special: { name: "Ataque Duplo", damage: 2 } },
+    archer: { icon: '🏹', moves: 1, attack: 0.5, health: 3, range: 2, special: { name: "Flecha Rápida", damage: 2 } },
+    tank: { icon: '🛡️', moves: 1, attack: 0.5, health: 12, range: 1, special: { name: "Defesa Sólida", damage: 0 } },
+    healer: { icon: '🩹', moves: 1, attack: 0, health: 3, heal: 2, range: 1, special: { name: "Cura Rápida", heal: 2 } },
     base: { icon: '🏰', moves: 0, attack: 1, health: 8, range: 1 }  // Base com vida reduzida
 };
 
@@ -27,6 +29,26 @@ const energyCost = {
     move: 1,
     attack: 2
 };
+
+// Carregar estatísticas do Local Storage
+function loadStats() {
+    const stats = JSON.parse(localStorage.getItem('playerStats'));
+    if (stats) {
+        playerStats = stats;
+    }
+    updateStatsDisplay();
+}
+
+// Atualiza a exibição das estatísticas
+function updateStatsDisplay() {
+    document.getElementById("victories").textContent = `Vitórias: ${playerStats[currentPlayer].victories}`;
+    document.getElementById("defeats").textContent = `Derrotas: ${playerStats[currentPlayer].defeats}`;
+}
+
+// Salvar estatísticas no Local Storage
+function saveStats() {
+    localStorage.setItem('playerStats', JSON.stringify(playerStats));
+}
 
 // Inicializa o tabuleiro
 function createBoard() {
@@ -109,13 +131,15 @@ function placeBase(row, col) {
         playerEnergy -= energyCost.base;
         updateEnergyDisplay();
         lastAction = null;  // A base não pode ser desfeita
+        turnSummary.push(`Jogador ${currentPlayer} colocou uma base.`);
+        updateTurnSummary();
     }
 }
 
 // Adiciona personagem
 function addCharacter(row, col, character) {
     if (board[row][col] === null) {
-        board[row][col] = { type: character, player: currentPlayer, health: characters[character].health };
+        board[row][col] = { type: character, player: currentPlayer, health: characters[character].health, specialUsed: false };
         const cell = document.querySelector(`[data-row='${row}'][data-col='${col}']`);
         cell.textContent = characters[character].icon;
         cell.classList.add(`player${currentPlayer}`);
@@ -123,6 +147,8 @@ function addCharacter(row, col, character) {
         playerEnergy -= energyCost[character];
         updateEnergyDisplay();
         lastAction = { type: 'add', row, col, character, player: currentPlayer };
+        turnSummary.push(`Jogador ${currentPlayer} adicionou um ${character}.`);
+        updateTurnSummary();
     }
 }
 
@@ -171,6 +197,8 @@ function moveCharacter(newRow, newCol) {
     updateEnergyDisplay();
     clearMovableHighlights();
     lastAction = { type: 'move', from: [row, col], to: [newRow, newCol], character: character };
+    turnSummary.push(`Jogador ${currentPlayer} moveu um ${character.type}.`);
+    updateTurnSummary();
     selectedCharacter = null;
 }
 
@@ -212,6 +240,8 @@ function executeAttack(row, col) {
     updateEnergyDisplay();
     clearAttackHighlights();
     lastAction = { type: 'attack', target: { row, col, previousHealth: target.health + damage } };
+    turnSummary.push(`Jogador ${currentPlayer} atacou um ${target.type}.`);
+    updateTurnSummary();
     selectedCharacter = null;
 }
 
@@ -275,6 +305,9 @@ function highlightAttackableTargets(row, col, characterType) {
 // Anuncia o vencedor e termina o jogo
 function announceWinner() {
     alert(`Jogador ${currentPlayer} venceu o jogo!`);
+    playerStats[currentPlayer].victories++;
+    playerStats[currentPlayer === 1 ? 2 : 1].defeats++;
+    saveStats();
     resetGame();
 }
 
@@ -331,104 +364,75 @@ function selectAction(action) {
     updateMessage(actionText);
 }
 
+// Usar habilidade especial
+function useSpecialAbility() {
+    if (!selectedCharacter) {
+        updateMessage("Selecione um personagem primeiro.");
+        return;
+    }
+    
+    const character = selectedCharacter.character;
+
+    if (character.specialUsed) {
+        updateMessage("Habilidade especial já utilizada.");
+        return;
+    }
+
+    // Executa a habilidade especial
+    const damage = character.special.damage || 0;
+    const targetCell = findNearestEnemy(selectedCharacter.row, selectedCharacter.col);
+    
+    if (targetCell) {
+        const [targetRow, targetCol] = targetCell;
+        const target = board[targetRow][targetCol];
+
+        if (target) {
+            target.health -= damage;
+            showDamageIndicator(targetRow, targetCol, damage);
+            updateHealthBar(targetRow, targetCol, target.health);
+            if (target.health <= 0) {
+                board[targetRow][targetCol] = null;
+                const cell = document.querySelector(`[data-row='${targetRow}'][data-col='${targetCol}']`);
+                cell.textContent = "";
+                cell.classList.remove(`player${target.player}`);
+            }
+            updateMessage(`${character.type} usou ${character.special.name}!`);
+            character.specialUsed = true;
+            playerEnergy -= 2; // Custo de energia para usar habilidade
+            updateEnergyDisplay();
+            turnSummary.push(`${character.type} usou ${character.special.name} contra um inimigo.`);
+            updateTurnSummary();
+        }
+    } else {
+        updateMessage("Nenhum inimigo ao alcance.");
+    }
+}
+
+// Encontra o inimigo mais próximo para usar a habilidade especial
+function findNearestEnemy(row, col) {
+    for (let r = 0; r < boardSize; r++) {
+        for (let c = 0; c < boardSize; c++) {
+            if (board[r][c] && board[r][c].player !== currentPlayer) {
+                return [r, c];
+            }
+        }
+    }
+    return null; // Retorna null se não houver inimigos
+}
+
 // Termina o turno
 function endTurn() {
-    if (currentPlayer === 1) {
-        // Jogador humano
-        currentPlayer = 2;
-        playerEnergy = 5;
-        document.getElementById("turn-info").textContent = `Turno do Jogador ${currentPlayer}`;
-        updateEnergyDisplay();
-        selectedAction = null;
-        selectedCharacter = null;
-        clearAllHighlights();
-        undoAvailable[currentPlayer] = true;
-    } else {
-        // Turno da IA
-        setTimeout(() => {
-            playComputerTurn();
-            currentPlayer = 1; // Volta para o jogador humano
-            playerEnergy = 5;
-            document.getElementById("turn-info").textContent = `Turno do Jogador ${currentPlayer}`;
-            updateEnergyDisplay();
-            selectedAction = null;
-            selectedCharacter = null;
-            clearAllHighlights();
-            undoAvailable[currentPlayer] = true;
-        }, 1000); // Delay para simular tempo de resposta da IA
-    }
-}
-
-// Função para a IA jogar
-function playComputerTurn() {
-    // Lógica básica da IA para fazer uma ação
-    if (!basePlaced[currentPlayer]) {
-        // Tentar colocar a base em uma posição aleatória
-        let placed = false;
-        while (!placed) {
-            const row = Math.floor(Math.random() * boardSize);
-            const col = Math.floor(Math.random() * boardSize);
-            if (board[row][col] === null) {
-                placeBase(row, col);
-                placed = true;
-            }
-        }
-    } else {
-        // Adicionar um personagem ou atacar, se possível
-        const possibleActions = Object.keys(energyCost).filter(action => playerEnergy >= energyCost[action]);
-        
-        if (possibleActions.length > 0) {
-            const action = possibleActions[Math.floor(Math.random() * possibleActions.length)];
-            switch (action) {
-                case 'warrior':
-                case 'archer':
-                case 'tank':
-                case 'healer':
-                    const baseCells = getBaseCells(currentPlayer);
-                    let added = false;
-                    for (const [r, c] of baseCells) {
-                        const positions = [
-                            [r - 1, c], [r + 1, c], [r, c - 1], [r, c + 1]
-                        ];
-                        for (const [nr, nc] of positions) {
-                            if (board[nr] && board[nr][nc] === null) {
-                                addCharacter(nr, nc, action);
-                                added = true;
-                                break;
-                            }
-                        }
-                        if (added) break;
-                    }
-                    break;
-                case 'attack':
-                    // Lógica para atacar um personagem adversário
-                    attackRandomOpponent();
-                    break;
-            }
-        }
-    }
-}
-
-// Função para atacar um oponente aleatório
-function attackRandomOpponent() {
-    const opponents = [];
-    for (let row = 0; row < boardSize; row++) {
-        for (let col = 0; col < boardSize; col++) {
-            const cell = board[row][col];
-            if (cell && cell.player === 1) {
-                opponents.push([row, col]);
-            }
-        }
-    }
-
-    if (opponents.length > 0) {
-        const [targetRow, targetCol] = opponents[Math.floor(Math.random() * opponents.length)];
-        const attacker = board[targetRow][targetCol];
-        const damage = attacker.attack || 1;
-
-        // Executa ataque
-        executeAttack(targetRow, targetCol);
-    }
+    turnSummary.push(`Resumo do Turno do Jogador ${currentPlayer}: ${turnSummary.slice(-5).join(', ')}`);
+    updateTurnSummary();
+    currentPlayer = currentPlayer === 1 ? 2 : 1;
+    playerEnergy = 5;
+    document.getElementById("turn-info").textContent = `Turno do Jogador ${currentPlayer}`;
+    updateEnergyDisplay();
+    selectedAction = null;
+    selectedCharacter = null;
+    clearAllHighlights();
+    undoAvailable[currentPlayer] = true;
+    turnSummary = []; // Limpa o resumo do turno para o próximo jogador
 }
 
 // Retrocede a última ação
@@ -525,8 +529,25 @@ function resetGame() {
     selectedCharacter = null;
     playerEnergy = 5;
     undoAvailable = { 1: true, 2: true };
+    turnSummary = []; // Limpa o resumo do turno
     createBoard();
 }
 
 // Inicializa o jogo ao carregar a página
-window.onload = createBoard;
+window.onload = function() {
+    loadStats();
+    createBoard();
+};
+
+// Alterna exibição das instruções
+function toggleInstructions() {
+    const instructions = document.getElementById("instructions");
+    instructions.style.display = instructions.style.display === "none" ? "block" : "none";
+}
+
+// Atualiza e exibe o resumo do turno
+function updateTurnSummary() {
+    const summaryDiv = document.getElementById("turn-summary");
+    summaryDiv.innerHTML = turnSummary.length > 0 ? `<h3>Resumo do Turno</h3><p>${turnSummary.join('<br>')}</p>` : '';
+    summaryDiv.style.display = turnSummary.length > 0 ? "block" : "none";
+}
